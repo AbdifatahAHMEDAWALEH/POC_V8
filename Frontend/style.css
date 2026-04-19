@@ -67,3 +67,83 @@ h1 {
             font-size: 14px;
             text-align: center;
         }
+
+/* Section d'upload */
+.upload-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #eeeeee;
+    text-align: center;
+}
+
+.upload-section h3 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+/* Style du formulaire */
+#uploadForm {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Style du champ de fichier (le rendre plus discret) */
+#cvFile {
+    padding: 10px;
+    border: 1px dashed #007bff;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    width: 100%;
+    max-width: 300px;
+}
+
+/* Style du bouton d'analyse */
+#uploadBtn {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#uploadBtn:hover {
+    background-color: #0056b3;
+}
+
+/* Zone de résultat (pour le texte extrait) */
+#analysis-result {
+    margin-top: 25px;
+    padding: 15px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.9em;
+    text-align: left;
+    max-height: 400px;
+    overflow-y: auto; /* Permet de scroller si le texte est long */
+}
+
+.AnalyzeSection textarea {
+    width: 100%;
+    max-width: 500px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: inherit;
+    resize: vertical; /* Permet à l'utilisateur d'agrandir seulement en hauteur */
+    margin-bottom: 15px;
+}
+
+.AnalyzeSection label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: #444;
+}

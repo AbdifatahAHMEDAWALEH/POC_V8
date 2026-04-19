@@ -12,6 +12,15 @@
         <p>Vous êtes maintenant connecté à votre espace.</p>
         <button onclick="logout()" style = "margin-top: 20px;">Se deconnecter</button> 
     </div>
+    <div class="AnalyzeSection">
+        <h3>Analyser une candidature</h3>
+        <form id="UploadForm">
+            <input type="file" id="cvFile" accept="application/pdf" required>
+            <textarea id="jobOfferDescription" placeholder="Collez ici la description du poste..." rows="10" required></textarea>
+            <button type="submit" id="uploadBtn">Charger le CV</button>
+        </form>
+        <div id="analysis-result"></div>
+    </div>
     <script src="script.js"></script>
     <script>
         window.onload = checkAuth();
