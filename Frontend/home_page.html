@@ -1,29 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome</title>
+    <title>Analyse CV - Dashboard</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <h1>Bienvenue, <span id="user-display"></span></h1>
-        <p>Vous êtes maintenant connecté à votre espace.</p>
-        <button onclick="logout()" style = "margin-top: 20px;">Se deconnecter</button> 
+        <p>Vous êtes connecté à votre espace expert.</p>
+        <button onclick="logout()" style="margin-top: 20px;">Se déconnecter</button> 
     </div>
+
     <div class="AnalyzeSection">
         <h3>Analyser une candidature</h3>
         <form id="UploadForm">
             <input type="file" id="cvFile" accept="application/pdf" required>
             <textarea id="jobOfferDescription" placeholder="Collez ici la description du poste..." rows="10" required></textarea>
-            <button type="submit" id="uploadBtn">Charger le CV</button>
+            
+            <button type="submit" id="uploadBtn">Lancer l'analyse</button>
+
+            <div id="loader" style="display:none; margin-top: 20px;">
+                <p>🤖 Gemma 4 analyse votre CV... (Patientez environ 1 min)</p>
+                <div class="spinner"></div>
+            </div>
         </form>
-        <div id="analysis-result"></div>
     </div>
+    <div id="analysis-result"></div>
+
     <script src="script.js"></script>
     <script>
-        window.onload = checkAuth();
+        // On passe la référence de la fonction, on ne l'appelle pas ici
+        window.onload = checkAuth; 
     </script>
 </body>
 </html>

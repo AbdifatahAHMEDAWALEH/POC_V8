@@ -13,11 +13,30 @@ import jwt
 from jwt import PyJWTError
 from fastapi.staticfiles import StaticFiles
 import os
+import fitz  # PyMuPDF
+import io
+from fastapi import File, UploadFile, Form
+import json
+import ollama
+import hashlib
+
+
+filter_system_prompt = """Tu es un filtre. Ton but est de déterminer si le texte fourni est une demande d'analyse de CV par rapport à une offre d'emploi. 
+Réponds uniquement par "oui" ou "non"."""
+main_system_prompt = """Tu es un expert en recrutement et optimisation de CV pour les systèmes ATS.
+Ton but est d'aider le candidat à passer les filtres automatiques. Ta réponse doit être en langue française.
+Réponds EXCLUSIVEMENT en JSON avec cette structure :
+{
+    "matching_score": 85,
+    "analysis_details": "Analyse globale du profil...",
+    "ats_advice": "Liste des mots-clés techniques de l'offre absents du CV...",
+    "improvement_tips": "Conseils de mise en forme ou d'ajustement des titres de postes..."
+}"""
 
 # On remonte d'un cran pour trouver le dossier frontend
 current_dir = os.path.dirname(os.path.realpath(__file__))
 frontend_dir = os.path.join(current_dir,"Frontend")
-
+analysis_cache = {}
 
 # --- Configuration de la sécurité ---
 SECRET_KEY = "my-secret-key"
@@ -172,7 +191,76 @@ async def user_registration(user: User_registration):
             db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
         
+def filter(question):
+    response = ollama.chat(model="gemma4:e2b", messages=[{'role': 'system', 'content': filter_system_prompt}, {'role': 'user', 'content': question}])
+    return response['message']['content'].strip().lower() == "oui"
+
+def main_model_stream(question):
+    response = ollama.chat(
+        model="gemma4:26b", 
+        messages=[{'role': 'system', 'content': main_system_prompt}, {'role': 'user', 'content': question}], 
+        stream=True
+    )
+
+
+def analyse_cv(text_extrait, job_offer_description):
+    question = f"CV:\n{text_extrait}\n\nOffre d'emploi:\n{job_offer_description}"
+    
+    # 1. Appel Ollama
+    response = ollama.chat(
+        model="gemma4:26b", 
+        messages=[{'role': 'system', 'content': main_system_prompt}, {'role': 'user', 'content': question}]
+    )
+    
+    # 2. Récupération du texte brut
+    contenu_brut = response['message']['content']
+    print(f"DEBUG IA : {contenu_brut}") # Pour voir ce que l'IA répond vraiment dans ton terminal
+
+    try:
+        # 3. Nettoyage : On cherche le premier '{' et le dernier '}'
+        # Cela permet d'ignorer tout texte avant ou après le JSON
+        debut = contenu_brut.find('{')
+        fin = contenu_brut.rfind('}') + 1
         
-            
+        if debut == -1 or fin == 0:
+            raise ValueError("L'IA n'a pas renvoyé de JSON valide")
+
+        json_propre = contenu_brut[debut:fin]
+        
+        # 4. Conversion
+        return json.loads(json_propre)
+        
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"Erreur de parsing JSON : {e}")
+        # On renvoie une réponse de secours pour éviter l'erreur 500
+        return {
+            "matching_score": 0,
+            "analysis_details": "L'IA a répondu dans un format illisible. Essayez de reformuler."
+        }
+
+def get_hash(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+        
+@app.post("/analyze")
+async def analyze(cv: UploadFile = File(...),
+                  job_offer_description: str = Form(...),
+                  authorization: str = Header(None)):
+    if not authorization:
+            raise HTTPException(status_code=401, detail="Aucun token de session fourni")
+    try:
+        pdf_bytes = await cv.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        text_extrait = ""
+        for page in doc:
+            text_extrait += page.get_text()
+        doc.close()
+
+        return analyse_cv(text_extrait, job_offer_description)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    
+
+
 
 app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="Frontend")

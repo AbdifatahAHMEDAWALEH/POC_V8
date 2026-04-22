@@ -89,24 +89,43 @@ if (uploadForm) {
         const cvFile = document.getElementById('cvFile').files[0];
         const jobOfferDescription = document.getElementById('jobOfferDescription').value;
         const token = localStorage.getItem('token');
+        const loader = document.getElementById('loader');
+        const btn = document.getElementById('uploadBtn');
 
         const formData = new FormData();
         formData.append('cv', cvFile);
         formData.append('job_offer_description', jobOfferDescription);
+        formData.append('authorization', `Bearer ${token}`);
+
+        // Affiche le loader et désactive le bouton pendant l'analyse
+        loader.style.display = 'block';
+        btn.disabled = true;
 
         try {
-                const response = await fetch(`${API_URL}/upload_cv`, {
+                const response = await fetch(`${API_URL}/analyze`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`
                 },
-                body: formData
+                body: formData,
+                keepalive: true
             });
-            if (response.ok)
-            {
+            if (response.ok) {
                 const result = await response.json();
                 const analysisResult = document.getElementById('analysis-result');
-                analysisResult.textContent = `Score de correspondance: ${result.matching_score}%\n\nDétails de l'analyse:\n${result.analysis_details}`;
+    
+        // On utilise innerHTML pour pouvoir injecter des balises structurées
+                analysisResult.innerHTML = `
+                <div style="background: #eef6ff; border-left: 5px solid #007bff; padding: 20px; border-radius: 5px;">
+                <h2 style="color: #007bff; margin-top: 0;">Score : ${result.matching_score}%</h2>
+            
+                <h4 style="margin-bottom: 5px;">Analyse :</h4>
+                <p style="white-space: pre-wrap; background: white; padding: 10px; border: 1px solid #ddd;">${result.analysis_details}</p>
+            
+                <h4 style="margin-bottom: 5px;">Conseils ATS :</h4>
+                <p style="white-space: pre-wrap; background: white; padding: 10px; border: 1px solid #ddd;">${result.ats_advice || "Non disponible"}</p>
+                </div>
+                `;
             }
             else {
                 const errorData = await response.json();

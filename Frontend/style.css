@@ -1,20 +1,26 @@
 body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background-color: #2c2a2a;
-            margin: 0;
-        }
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    flex-direction: column; /* On empile verticalement */
+    align-items: center;    /* On centre horizontalement */
+    min-height: 100vh;
+    background-color: #1a1a1a; /* Un gris très sombre plus moderne */
+    margin: 0;
+    padding: 40px 20px;     /* On donne de l'air en haut et en bas */
+    color: white;
+}
+
 .container {
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            width: 300px;
-        }
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    width: 100%;
+    max-width: 400px;
+    margin-bottom: 30px; /* Espace avec la section suivante */
+    color: #333; /* Texte sombre dans la carte blanche */
+}
 h1 {
             color: #000000;
             margin-bottom: 20px;
@@ -82,54 +88,57 @@ h1 {
 }
 
 /* Style du formulaire */
-#uploadForm {
+#UploadForm {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
+    flex-direction: column; /* Aligne les éléments verticalement */
+    align-items: center;    /* Centre horizontalement */
+    gap: 20px;              /* Espace régulier entre chaque élément */
+    width: 100%;
 }
-
 /* Style du champ de fichier (le rendre plus discret) */
 #cvFile {
-    padding: 10px;
-    border: 1px dashed #007bff;
-    border-radius: 5px;
-    background-color: #f8f9fa;
-    cursor: pointer;
     width: 100%;
-    max-width: 300px;
+    max-width: 400px; /* Plus large pour être plus élégant */
+    box-sizing: border-box;
+}
+
+#jobOfferDescription {
+    width: 100%;
+    max-width: 600px; /* On donne de l'espace à la zone de texte */
+    box-sizing: border-box;
 }
 
 /* Style du bouton d'analyse */
 #uploadBtn {
+    width: 100%;
+    max-width: 250px; /* Bouton avec une largeur fixe et centrée */
+    padding: 15px;
+    font-size: 1.1em;
+    border-radius: 8px;
+    cursor: pointer;
     background-color: #007bff;
     color: white;
     border: none;
-    padding: 10px 25px;
-    border-radius: 5px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.2s ease;
 }
 
 #uploadBtn:hover {
     background-color: #0056b3;
+    transform: translateY(-2px); /* Petit effet de survol sympa */
 }
-
 /* Zone de résultat (pour le texte extrait) */
 #analysis-result {
-    margin-top: 25px;
-    padding: 15px;
+    margin-top: 20px;
+    padding: 20px;
     background-color: #ffffff;
     border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 0.9em;
-    text-align: left;
-    max-height: 400px;
-    overflow-y: auto; /* Permet de scroller si le texte est long */
+    /* On s'assure que la div s'étire selon le contenu */
+    height: auto; 
+    min-height: 100px;
+    /* On gère le débordement proprement */
+    overflow-wrap: break-word;
+    word-wrap: break-word;
 }
-
 .AnalyzeSection textarea {
     width: 100%;
     max-width: 500px;
@@ -141,9 +150,28 @@ h1 {
     margin-bottom: 15px;
 }
 
-.AnalyzeSection label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: #444;
+.AnalyzeSection {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 800px; /* On donne de la largeur pour l'analyse */
+    color: #333;
+    text-align: center;
+}
+
+#analysis-result {
+    margin-top: 30px;
+    width: 100%;
+    max-width: 800px;
+    /* Suppression des styles qui pourraient bloquer la taille */
+    height: auto;
+    color: #333;
+}
+
+.AnalyzeSection {
+    /* Évite de fixer la hauteur ici aussi */
+    height: auto;
+    padding-bottom: 50px; /* Un peu d'air en bas */
 }
