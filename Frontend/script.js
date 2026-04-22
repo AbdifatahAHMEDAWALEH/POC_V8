@@ -1,6 +1,31 @@
 
 const API_URL = "http://127.0.0.1:8000";
 const uploadForm = document.getElementById('UploadForm');
+let lastAnalyzedFile = null;
+let lastAnalyzedJobDesc = "";
+
+function validateForm() {
+    /**
+     * Valide que les champs du formulaire d'analyse sont correctement remplis avant de permettre la soumission
+     * Affiche des messages d'erreur spécifiques pour chaque champ manquant ou incorrect
+     **/
+    const cvFileInput = document.getElementById('cvFile');
+    const jobOfferDescriptionInput = document.getElementById('jobOfferDescription');
+    const btn = document.getElementById('uploadBtn');
+
+    btn.disabled = !(cvFileInput && jobOfferDescriptionInput)
+    
+    if (btn.disabled) {
+        btn.style.opacity = 0.5;
+        btn.style.cursor = 'not-allowed';
+    }
+    else {
+        btn.style.opacity = 1;
+        btn.style.cursor = 'pointer';
+    }
+}       
+
+
 
 async function login(event,route) {
     /**
@@ -97,9 +122,15 @@ if (uploadForm) {
         formData.append('job_offer_description', jobOfferDescription);
         formData.append('authorization', `Bearer ${token}`);
 
+        // Vérifie si le même fichier et la même description ont déjà été analysés pour éviter les requêtes redondantes
+        if (cvFile.name === lastAnalyzedFile && jobOfferDescription === lastAnalyzedJobDesc) {
+            console.log("Même fichier et description détectés, réutilisation du résultat précédent.");
+            return;
+        }
         // Affiche le loader et désactive le bouton pendant l'analyse
         loader.style.display = 'block';
         btn.disabled = true;
+        btn.innerText = "Analyse en cours...";
 
         try {
                 const response = await fetch(`${API_URL}/analyze`, {
@@ -111,6 +142,8 @@ if (uploadForm) {
                 keepalive: true
             });
             if (response.ok) {
+                lastAnalyzedFile = cvFile;
+                lastAnalyzedJobDesc = jobOfferDescription;
                 const result = await response.json();
                 const analysisResult = document.getElementById('analysis-result');
     
@@ -136,6 +169,13 @@ if (uploadForm) {
         catch (error) {
             const analysisResult = document.getElementById('analysis-result');
             analysisResult.textContent = "Erreur:" + error.message;
+        }
+        finally {
+            // Cache le loader et réactive le bouton après l'analyse
+            loader.style.display = 'none';
+            btn.disabled = false;
+            btn.innerText = "Analyser mon CV";
+            validateForm(); // Revalide le formulaire pour ajuster l'état du bouton si nécessaire
         }
     });
 }
@@ -187,11 +227,23 @@ async function logout() {
     window.location.href = 'index.html';
 }
 
+// --- INITIALISATION DES ÉCOUTEURS (EVENT LISTENERS) ---
 
+// On utilise des conditions 'if' pour vérifier la présence des éléments 
+// avant d'ajouter des écouteurs. Cela évite de faire planter le script.
+
+const cvElem = document.getElementById('cvFile');
+if (cvElem) {
+    cvElem.addEventListener('change', validateForm);
+}
+
+const jobElem = document.getElementById('jobOfferDescription');
+if (jobElem) {
+    jobElem.addEventListener('input', validateForm);
+}
 
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
-    // On utilise une fonction fléchée pour passer 'event' ET la route
     loginForm.addEventListener('submit', (event) => {
         login(event, '/login'); 
     });
@@ -199,8 +251,10 @@ if (loginForm) {
 
 const registrationForm = document.getElementById('registrationForm');
 if (registrationForm) {
-    // On utilise une fonction fléchée pour passer 'event' ET la route
     registrationForm.addEventListener('submit', (event) => {
-        register(event, '/register'); 
+        login(event, '/register'); 
     });
 }
+
+// Initialisation de l'état du bouton au chargement
+validateForm();

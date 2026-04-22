@@ -20,6 +20,13 @@ import json
 import ollama
 import hashlib
 
+last_state = {
+    "last_cv":"",
+    "last_job_offer":"",
+    "last_cv_hash":"",
+    "last_job_offer_hash":""
+}
+
 
 filter_system_prompt = """Tu es un filtre. Ton but est de déterminer si le texte fourni est une demande d'analyse de CV par rapport à une offre d'emploi. 
 Réponds uniquement par "oui" ou "non"."""
@@ -239,23 +246,41 @@ def analyse_cv(text_extrait, job_offer_description):
         }
 
 def get_hash(text):
-    return hashlib.sha256(text.encode()).hexdigest()
+    return hashlib.md5(text.encode()).hexdigest()
         
 @app.post("/analyze")
 async def analyze(cv: UploadFile = File(...),
                   job_offer_description: str = Form(...),
                   authorization: str = Header(None)):
+    global last_state
     if not authorization:
             raise HTTPException(status_code=401, detail="Aucun token de session fourni")
     try:
         pdf_bytes = await cv.read()
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        text_extrait = ""
-        for page in doc:
-            text_extrait += page.get_text()
-        doc.close()
+        current_cv_hash = get_hash(pdf_bytes)
 
-        return analyse_cv(text_extrait, job_offer_description)
+        if current_cv_hash != last_state["last_cv_hash"]:
+            print("Nouveau CV détecté. Extraction du texte en cours...")
+            doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+            text_extrait = "".join([page.get_text() for page in doc])
+            doc.close()
+            last_state["last_cv"] = text_extrait
+            last_state["last_cv_hash"] = current_cv_hash
+        else:
+            print("CV inchangé. Utilisation du texte extrait précédemment.")
+            text_extrait = last_state["last_cv"]
+        
+        current_job_offer_hash = get_hash(job_offer_description)
+
+        if current_job_offer_hash != last_state["last_job_offer_hash"]:
+            print("Nouvelle offre d'emploi détectée.")
+            last_state["last_job_offer"] = job_offer_description    
+            last_state["last_job_offer_hash"] = current_job_offer_hash  
+        else:
+            print("Offre d'emploi inchangée.")
+            job_offer_description = last_state["last_job_offer"]
+
+        return analyse_cv(text_extrait, job_offer_description)  
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
