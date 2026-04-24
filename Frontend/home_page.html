@@ -28,6 +28,24 @@
         </form>
     </div>
     <div id="analysis-result"></div>
+    <script>
+    // Cette fonction sera appelée par ton script.js
+    function displayAnalysis(score, details, advice) {
+        const container = document.getElementById('analysis-result');
+        
+        container.innerHTML = `
+            <div style="background: #eef6ff; border-left: 5px solid #007bff; padding: 20px; border-radius: 5px; margin-top: 20px; color: #333; text-align: left;">
+                <h2 style="color: #007bff; margin-top: 0;">Score : ${score}%</h2>
+                
+                <h4 style="margin-bottom: 5px;">Analyse :</h4>
+                <p style="white-space: pre-wrap; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">${details}</p>
+                
+                <h4 style="margin-bottom: 5px; margin-top: 15px;">Conseils ATS :</h4>
+                <p style="white-space: pre-wrap; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">${advice || "Non disponible"}</p>
+            </div>
+        `;
+    }
+</script>
 
     <script src="script.js"></script>
     <script>

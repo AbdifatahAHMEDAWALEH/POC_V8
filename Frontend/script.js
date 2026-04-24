@@ -1,44 +1,39 @@
 
 const API_URL = "http://127.0.0.1:8000";
-const uploadForm = document.getElementById('UploadForm');
-let lastAnalyzedFile = null;
+let lastAnalyzedFile = "";
 let lastAnalyzedJobDesc = "";
 
+// --- FONCTION DE VALIDATION ---
 function validateForm() {
-    /**
-     * Valide que les champs du formulaire d'analyse sont correctement remplis avant de permettre la soumission
-     * Affiche des messages d'erreur spécifiques pour chaque champ manquant ou incorrect
-     **/
     const cvFileInput = document.getElementById('cvFile');
     const jobOfferDescriptionInput = document.getElementById('jobOfferDescription');
     const btn = document.getElementById('uploadBtn');
 
-    btn.disabled = !(cvFileInput && jobOfferDescriptionInput)
+    // On sort discrètement si on n'est pas sur la bonne page
+    if (!cvFileInput || !jobOfferDescriptionInput || !btn) return;
+
+    const hasFile = cvFileInput.files.length > 0;
+    const hasText = jobOfferDescriptionInput.value.trim().length > 0;
+
+    btn.disabled = !(hasFile && hasText);
     
     if (btn.disabled) {
         btn.style.opacity = 0.5;
         btn.style.cursor = 'not-allowed';
-    }
-    else {
+    } else {
         btn.style.opacity = 1;
         btn.style.cursor = 'pointer';
     }
-}       
+}      
 
 
 
-async function login(event,route) {
-    /**
-     * Gère la connexion de l'utilisateur et stocke le token d'authentification dans le localStorage
-     * @param {string} route - L'URL de l'endpoint de connexion de l'API
-     * @param {Event} event - L'événement de soumission du formulaire
-     */
+// --- FONCTIONS AUTH (LOGIN / REGISTER) ---
+async function login(event, route) {
     event.preventDefault();
-    const form = event.target; // Récupère le formulaire à partir de l'événement
+    const form = event.target;
     const data = new FormData(form);
     const values = Object.fromEntries(data.entries());
-
-
     const responseZone = document.getElementById('zone_response');
 
     try {
@@ -49,28 +44,21 @@ async function login(event,route) {
         });
 
         if (response.ok) {
-            console.log("Connexion réussie !");
             const data = await response.json();
             localStorage.setItem('token', data.access_token);
             localStorage.setItem('username', values.username);
-            responseZone.textContent = "Connexion réussie !";
-            responseZone.style.color = "green";
             window.location.href = 'home_page.html';
-        }
-        if (!response.ok) {
-            console.log("Echec de onnexion!");
+        } else {
             const errorData = await response.json();
             throw new Error(errorData.detail || 'Erreur de connexion');
         }
-    }
-    catch (error) {
+    } catch (error) {
         if(responseZone){
-            responseZone.textContent = "Erreur:" + error.message;
+            responseZone.textContent = "Erreur : " + error.message;
             responseZone.style.color = "red";
         }
     }
 }
-
 async function register(event, route) {
     /**
      * Gère l'inscription de l'utilisateur et affiche un message de succès ou d'erreur
@@ -108,74 +96,48 @@ async function register(event, route) {
         }
     }
 
+// 1. Gestion du Formulaire d'Analyse (Page Home)
+const uploadForm = document.getElementById('UploadForm');
 if (uploadForm) {
     uploadForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+
         const cvFile = document.getElementById('cvFile').files[0];
-        const jobOfferDescription = document.getElementById('jobOfferDescription').value;
-        const token = localStorage.getItem('token');
-        const loader = document.getElementById('loader');
+        const jobDesc = document.getElementById('jobOfferDescription').value.trim();
         const btn = document.getElementById('uploadBtn');
 
-        const formData = new FormData();
-        formData.append('cv', cvFile);
-        formData.append('job_offer_description', jobOfferDescription);
-        formData.append('authorization', `Bearer ${token}`);
+        const currentFileFingerprint = cvFile.name + cvFile.size;
 
-        // Vérifie si le même fichier et la même description ont déjà été analysés pour éviter les requêtes redondantes
-        if (cvFile.name === lastAnalyzedFile && jobOfferDescription === lastAnalyzedJobDesc) {
-            console.log("Même fichier et description détectés, réutilisation du résultat précédent.");
+        if (currentFileFingerprint === lastAnalyzedFile && jobDesc === lastAnalyzedJobDesc) {
+            console.log("Optimisation : Données identiques.");
             return;
         }
-        // Affiche le loader et désactive le bouton pendant l'analyse
-        loader.style.display = 'block';
+
         btn.disabled = true;
-        btn.innerText = "Analyse en cours...";
+        document.getElementById('loader').style.display = 'block';
 
         try {
-                const response = await fetch(`${API_URL}/analyze`, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                },
-                body: formData,
-                keepalive: true
+            const formData = new FormData();
+            formData.append('cv', cvFile); // Vérifie si ton backend attend 'cv' ou 'cvFile'
+            formData.append('job_offer_description', jobDesc);
+
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_URL}/analyze`, {
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                body: formData
             });
+
             if (response.ok) {
-                lastAnalyzedFile = cvFile;
-                lastAnalyzedJobDesc = jobOfferDescription;
                 const result = await response.json();
-                const analysisResult = document.getElementById('analysis-result');
-    
-        // On utilise innerHTML pour pouvoir injecter des balises structurées
-                analysisResult.innerHTML = `
-                <div style="background: #eef6ff; border-left: 5px solid #007bff; padding: 20px; border-radius: 5px;">
-                <h2 style="color: #007bff; margin-top: 0;">Score : ${result.matching_score}%</h2>
-            
-                <h4 style="margin-bottom: 5px;">Analyse :</h4>
-                <p style="white-space: pre-wrap; background: white; padding: 10px; border: 1px solid #ddd;">${result.analysis_details}</p>
-            
-                <h4 style="margin-bottom: 5px;">Conseils ATS :</h4>
-                <p style="white-space: pre-wrap; background: white; padding: 10px; border: 1px solid #ddd;">${result.ats_advice || "Non disponible"}</p>
-                </div>
-                `;
+                lastAnalyzedFile = currentFileFingerprint;
+                lastAnalyzedJobDesc = jobDesc;
+                displayAnalysis(result.matching_score, result.analysis_details, result.ats_advice);
             }
-            else {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || "Erreur lors de l'analyse du CV");
-            }
-            
-        }
-        catch (error) {
-            const analysisResult = document.getElementById('analysis-result');
-            analysisResult.textContent = "Erreur:" + error.message;
-        }
-        finally {
-            // Cache le loader et réactive le bouton après l'analyse
-            loader.style.display = 'none';
+        } finally {
+            document.getElementById('loader').style.display = 'none';
             btn.disabled = false;
-            btn.innerText = "Analyser mon CV";
-            validateForm(); // Revalide le formulaire pour ajuster l'état du bouton si nécessaire
+            validateForm();
         }
     });
 }
@@ -241,7 +203,7 @@ const jobElem = document.getElementById('jobOfferDescription');
 if (jobElem) {
     jobElem.addEventListener('input', validateForm);
 }
-
+// 2. Gestion du Formulaire de Login (Page Index)
 const loginForm = document.getElementById('loginForm');
 if (loginForm) {
     loginForm.addEventListener('submit', (event) => {
