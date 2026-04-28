@@ -8,49 +8,81 @@
 </head>
 <body>
     <div class="container">
-        <h1>Bienvenue, <span id="user-display"></span></h1>
-        <p>Vous êtes connecté à votre espace expert.</p>
-        <button onclick="logout()" style="margin-top: 20px;">Se déconnecter</button> 
-    </div>
-
-    <div class="AnalyzeSection">
-        <h3>Analyser une candidature</h3>
-        <form id="UploadForm">
-            <input type="file" id="cvFile" accept="application/pdf" required>
-            <textarea id="jobOfferDescription" placeholder="Collez ici la description du poste..." rows="10" required></textarea>
+        <div class="dashboard-grid">
             
-            <button type="submit" id="uploadBtn">Lancer l'analyse</button>
+            <div class="card">
+                <h1>Bienvenue, <span id="user-display"></span></h1>
+                <p>Vous êtes connecté à votre espace expert.</p>
+            </div>
 
-            <div id="loader" style="display:none; margin-top: 20px;">
-                <p>🤖 Gemma 4 analyse votre CV... (Patientez environ 1 min)</p>
-                <div class="spinner"></div>
+            <div id="cv-library" class="card" style="display: none;">
+                <h3>📚 Ma bibliothèque de CV</h3>
+                <ul id="cvs-list" style="list-style: none; padding: 0; margin: 0;"></ul>
             </div>
-        </form>
+
+            <div class="card AnalyzeSection">
+                <h3>Analyser une candidature</h3>
+                
+                <div id="selected-cv-info" style="display:none; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; margin-bottom: 15px; border-radius: 8px;">
+                    <span id="selected-cv-name"></span>
+                    <button type="button" onclick="clearSelectedCv()" style="background:none; color:red; border:none; cursor:pointer; font-size:12px; margin-left: 10px;">(Annuler)</button>
+                </div>
+
+                <form id="UploadForm">
+                    <div id="file-input-container">
+                        <label>Uploader un nouveau CV :</label>     
+                        <input type="file" id="cvFile" accept="application/pdf" style="margin-top: 10px;">
+                        
+                        <div style="margin: 15px 0; text-align: left; color: #333;">
+                            <input type="checkbox" id="saveCvCheck">
+                            <label for="saveCvCheck">Sauvegarder ce CV dans ma bibliothèque</label>
+                        </div>
+                    </div>
+
+                    <textarea id="jobOfferDescription" placeholder="Description du poste..." rows="8" required></textarea>
+                    <button type="submit" id="uploadBtn">Lancer l'analyse</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="footer-actions">
+            <button onclick="logout()" class="btn-logout">Se déconnecter</button> 
+        </div>
+
+        <div id="loader" style="display:none; margin-top: 20px;">
+            <p>🤖 Gemma 4 analyse votre CV...</p>
+            <div class="spinner"></div>
+        </div>
+
+        <div id="analysis-result"></div>
     </div>
-    <div id="analysis-result"></div>
-    <script>
-    // Cette fonction sera appelée par ton script.js
-    function displayAnalysis(score, details, advice) {
-        const container = document.getElementById('analysis-result');
-        
-        container.innerHTML = `
-            <div style="background: #eef6ff; border-left: 5px solid #007bff; padding: 20px; border-radius: 5px; margin-top: 20px; color: #333; text-align: left;">
-                <h2 style="color: #007bff; margin-top: 0;">Score : ${score}%</h2>
-                
-                <h4 style="margin-bottom: 5px;">Analyse :</h4>
-                <p style="white-space: pre-wrap; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">${details}</p>
-                
-                <h4 style="margin-bottom: 5px; margin-top: 15px;">Conseils ATS :</h4>
-                <p style="white-space: pre-wrap; background: white; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">${advice || "Non disponible"}</p>
-            </div>
-        `;
-    }
-</script>
 
     <script src="script.js"></script>
     <script>
-        // On passe la référence de la fonction, on ne l'appelle pas ici
-        window.onload = checkAuth; 
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof checkAuth === "function") checkAuth();
+        });
+
+        function displayAnalysis(score, details, advice) {
+            const container = document.getElementById('analysis-result');
+            let color = score >= 70 ? "#2ecc71" : (score >= 40 ? "#f1c40f" : "#e74c3c");
+            
+            container.innerHTML = `
+                <div class="card result-card">
+                    <h2 style="color: ${color};">Score : ${score}%</h2>
+                    <div style="width: 100%; background: #eee; height: 10px; border-radius: 5px; margin-bottom: 20px;">
+                        <div style="width: ${score}%; background: ${color}; height: 100%; border-radius: 5px; transition: width 1s;"></div>
+                    </div>
+                    <div class="result-grid">
+                        <div class="result-box"><h4>Analyse</h4><p>${details}</p></div>
+                        <div class="result-box"><h4>Conseils</h4><p>${advice || "N/A"}</p></div>
+                    </div>
+                </div>
+            `;
+            container.scrollIntoView({ behavior: 'smooth' });
+            
+        }
+
     </script>
 </body>
 </html>

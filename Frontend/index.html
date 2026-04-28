@@ -1,32 +1,36 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome</title>
+    <title>Connexion - Expert CV</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Welcome</h1>
-        <h2>Please log in to continue</h2>
-        <form id="loginForm">
-            <div class = "form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username">
-            </div>
-            <div class = "form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password">
-            </div>     
-            <button type="submit" class="button">Login</button> 
-            <p id="zone_response" class="response-message"></p>
-        </form>
-        <p>Vous n'avez pas encore de compte ?</p>
-        <a href="registration_page.html" class="button">S'incrire</a>
+        <div class="card auth-card">
+            <h1>Connexion</h1>
+            <p style="color: #666; margin-bottom: 30px;">Veuillez vous connecter pour accéder à l'outil.</p>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Nom d'utilisateur</label>
+                    <input type="text" id="username" name="username" placeholder="Votre pseudo" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                </div>     
+                <button type="submit" class="btn-primary">Se connecter</button> 
+                <p id="zone_response" class="response-message"></p>
+            </form>
 
+            <div class="auth-footer">
+                Vous n'avez pas encore de compte ? <br>
+                <a href="registration_page.html" class="link-button">Créer un compte expert</a>
+            </div>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>
 </html>
-     

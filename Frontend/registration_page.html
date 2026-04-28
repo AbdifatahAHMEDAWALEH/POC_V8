@@ -1,42 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register for an Account</title>
+    <title>Inscription - Expert CV</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
-        <h1>Create Account</h1>
-        <form id="registrationForm">
-            <div class="form-group">
-                <label for="first_name">First Name</label>
-                <input type="text" id="first_name" name="first_name" required>
+        <div class="card auth-card">
+            <h1>Créer un compte</h1>
+            <p style="color: #666; margin-bottom: 30px;">Rejoignez notre plateforme d'analyse de CV.</p>
+            
+            <form id="registrationForm">
+                <div class="form-group">
+                    <label for="first_name">Prénom</label>
+                    <input type="text" id="first_name" name="first_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Nom</label>
+                    <input type="text" id="last_name" name="last_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="username">Nom d'utilisateur</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Mot de passe</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn-primary">Créer mon compte</button>
+                <p id="zone_response" class="response-message"></p>
+            </form>
+
+            <div class="auth-footer">
+                Déjà inscrit ? <a href="index.html" class="link-button">Se connecter</a>
             </div>
-            <div class="form-group">
-                <label for="last_name">Last Name</label>
-                <input type="text" id="last_name" name="last_name" required>
-            </div>
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" name="email" required>
-            </div>
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            <button type="submit" class="button">Register</button>
-            <p id="zone_response" class="response-message"></p>
-        </form>
-        <p>Already have an account?</p>
-        <a href="index.html" class="button">Login</a>
+        </div>
     </div>
-    
     <script src="script.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Text, DateTime
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship, Session
 from sqlalchemy import desc
 from pydantic import BaseModel
 from passlib.context import CryptContext
@@ -19,6 +19,7 @@ from fastapi import File, UploadFile, Form
 import json
 import ollama
 import hashlib
+from datetime import datetime
 
 last_state = {
     "last_cv":"",
@@ -27,6 +28,8 @@ last_state = {
     "last_job_offer_hash":""
 }
 
+first_analysis = ""
+
 
 filter_system_prompt = """Tu es un filtre. Ton but est de déterminer si le texte fourni est une demande d'analyse de CV par rapport à une offre d'emploi. 
 Réponds uniquement par "oui" ou "non"."""
@@ -34,11 +37,16 @@ main_system_prompt = """Tu es un expert en recrutement et optimisation de CV pou
 Ton but est d'aider le candidat à passer les filtres automatiques. Ta réponse doit être en langue française.
 Réponds EXCLUSIVEMENT en JSON avec cette structure :
 {
-    "matching_score": 85,
+    "ATS_score": 85,
     "analysis_details": "Analyse globale du profil...",
     "ats_advice": "Liste des mots-clés techniques de l'offre absents du CV...",
-    "improvement_tips": "Conseils de mise en forme ou d'ajustement des titres de postes..."
-}"""
+    "missing_skills": ["skill1", "skill2", "skill3"],
+
+}
+Aucun autre texte ne doit être présent dans ta réponse, uniquement ce JSON"""
+
+
+
 
 # On remonte d'un cran pour trouver le dossier frontend
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -88,6 +96,16 @@ class Account(Base):
     first_name = Column(String)
     last_name = Column(String)
     email = Column(String, unique=True)
+    documents = relationship("Document", back_populates="owner", cascade="all, delete-orphan")
+
+class Document(Base):
+    __tablename__ = "documents"
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String)
+    content = Column(String)
+    created_at = Column(String)
+    user_id = Column(Integer, ForeignKey("accounts.id"))
+    owner = relationship("Account", back_populates="documents")
 
 class User_registration(BaseModel):
     username: str
@@ -103,6 +121,10 @@ class UserAuth(BaseModel):
 class UserInfo(BaseModel):
     username: str
 
+class userCV(BaseModel):
+    filename: str
+    content: str
+    created_at: str
 
 
 # --- création de la base de données ---
@@ -202,9 +224,9 @@ def filter(question):
     response = ollama.chat(model="gemma4:e2b", messages=[{'role': 'system', 'content': filter_system_prompt}, {'role': 'user', 'content': question}])
     return response['message']['content'].strip().lower() == "oui"
 
-def main_model_stream(question):
+def main_model(question):
     response = ollama.chat(
-        model="gemma4:26b", 
+        model="gemma4:e4b", 
         messages=[{'role': 'system', 'content': main_system_prompt}, {'role': 'user', 'content': question}], 
         stream=True
     )
@@ -215,7 +237,7 @@ def analyse_cv(text_extrait, job_offer_description):
     
     # 1. Appel Ollama
     response = ollama.chat(
-        model="gemma4:26b", 
+        model="gemma4:e4b", 
         messages=[{'role': 'system', 'content': main_system_prompt}, {'role': 'user', 'content': question}]
     )
     
@@ -241,7 +263,7 @@ def analyse_cv(text_extrait, job_offer_description):
         print(f"Erreur de parsing JSON : {e}")
         # On renvoie une réponse de secours pour éviter l'erreur 500
         return {
-            "matching_score": 0,
+            "ATS_score": 0,
             "analysis_details": "L'IA a répondu dans un format illisible. Essayez de reformuler."
         }
 
@@ -250,25 +272,103 @@ def get_hash(data):
     if isinstance(data, str):
         data = data.encode()
     return hashlib.md5(data).hexdigest()
+
+
+
+# Correction du type : db doit être une Session, pas un Account
+def save_cv(db: Session, text: str, user_id: int, filename: str):
+    new_document = Document(
+        filename=filename,
+        content=text,            # Utilise 'content' (selon ton modèle Document)
+        user_id=user_id,         # NE PAS OUBLIER de lier l'utilisateur !
+        created_at=datetime.utcnow().isoformat()
+    )
+    db.add(new_document)
+    db.commit()
+    db.refresh(new_document)
+    return new_document
         
 @app.post("/analyze")
-async def analyze(cv: UploadFile = File(...),
+async def analyze(cv: Optional[UploadFile] = File(None),
+                  cv_id: Optional[int] = Form(None),
                   job_offer_description: str = Form(...),
                   authorization: str = Header(None)):
     if not authorization:
         raise HTTPException(status_code=401, detail="Token manquant")
     
+    token= authorization.split(" ")[1]
+    username = get_current_user(token)
+    
     try:
-        # Traitement direct : extraction et envoi à l'IA
+        with get_db() as db:
+            user = db.query(Account).filter(Account.username == username).first()
+            if not user:
+                raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+            text_extrait = ""
+            if cv:
+                pdf_bytes = await cv.read()
+                doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+                text_extrait = "".join([page.get_text() for page in doc])
+                doc.close()
+            elif cv_id:
+                db_doc = db.query(Document).filter(Document.id == cv_id, Document.user_id == user.id).first()
+                if not db_doc:
+                    raise HTTPException(status_code=404, detail="CV non trouvé")
+                text_extrait = db_doc.content
+            first_analysis = ""
+            first_analysis = analyse_cv(text_extrait, job_offer_description)
+            return first_analysis
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+            
+
+@app.post("/save-cv")
+async def save_cv_endpoint(cv: UploadFile = File(...), authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Token manquant")
+    try:
+        token = authorization.split(" ")[1]
+        username = get_current_user(token)
+        
         pdf_bytes = await cv.read()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         text_extrait = "".join([page.get_text() for page in doc])
         doc.close()
         
-        return analyse_cv(text_extrait, job_offer_description)
+        with get_db() as db:
+            user = db.query(Account).filter(Account.username == username).first()
+            if not user:
+                raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+            
+            new_doc = save_cv(db, text_extrait, user.id, cv.filename)
+            return {"message": "CV enregistré avec succès", "cv_id": new_doc.id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
 
+@app.get("/my-cvs")
+async def get_my_cvs(authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Token manquant")
+    try:
+        token = authorization.split(" ")[1]
+        username = get_current_user(token)
+        
+        with get_db() as db:
+            user = db.query(Account).filter(Account.username == username).first()
+            if not user:
+                raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+            
+            cvs = [{"id": doc.id, "filename": doc.filename, "created_at": doc.created_at} for doc in user.documents]
+            return {"cvs": cvs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 
+        
+        
 
 app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="Frontend")

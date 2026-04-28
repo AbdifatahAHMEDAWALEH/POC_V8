@@ -1,7 +1,32 @@
-
 const API_URL = "http://127.0.0.1:8000";
 let lastAnalyzedFile = "";
 let lastAnalyzedJobDesc = "";
+let selectedCvId = null;
+
+// --- GESTION BIBLIOTHÈQUE ---
+function useSavedCv(cvId, filename) {
+    selectedCvId = cvId;
+    
+    const infoZone = document.getElementById('selected-cv-info');
+    infoZone.style.display = 'block';
+    // Ajout d'une petite animation de flash pour attirer l'oeil
+    infoZone.style.animation = "highlight 1s ease"; 
+    
+    document.getElementById('selected-cv-name').innerText = "📍 Prêt pour analyse : " + filename;
+    document.getElementById('file-input-container').style.display = 'none';
+
+    // Scroll fluide vers le formulaire pour mobile/petits écrans
+    document.querySelector('.AnalyzeSection').scrollIntoView({ behavior: 'smooth' });
+
+    validateForm();
+}
+
+function clearSelectedCv() {
+    selectedCvId = null;
+    document.getElementById('selected-cv-info').style.display = 'none';
+    document.getElementById('file-input-container').style.display = 'block';
+    validateForm();
+}
 
 // --- FONCTION DE VALIDATION ---
 function validateForm() {
@@ -9,26 +34,49 @@ function validateForm() {
     const jobOfferDescriptionInput = document.getElementById('jobOfferDescription');
     const btn = document.getElementById('uploadBtn');
 
-    // On sort discrètement si on n'est pas sur la bonne page
-    if (!cvFileInput || !jobOfferDescriptionInput || !btn) return;
+    if (!btn) return;
 
-    const hasFile = cvFileInput.files.length > 0;
-    const hasText = jobOfferDescriptionInput.value.trim().length > 0;
+    const hasFile = cvFileInput && cvFileInput.files.length > 0;
+    const hasSelectedCv = selectedCvId !== null;
+    const hasJobDesc = jobOfferDescriptionInput && jobOfferDescriptionInput.value.trim().length > 0;
 
-    btn.disabled = !(hasFile && hasText);
-    
-    if (btn.disabled) {
-        btn.style.opacity = 0.5;
-        btn.style.cursor = 'not-allowed';
-    } else {
-        btn.style.opacity = 1;
-        btn.style.cursor = 'pointer';
+    // Le bouton est actif si (Fichier OU CV en base) ET Description
+    btn.disabled = !((hasFile || hasSelectedCv) && hasJobDesc);
+    btn.style.opacity = btn.disabled ? 0.5 : 1;
+    btn.style.cursor = btn.disabled ? 'not-allowed' : 'pointer';
+}
+
+// --- INSCRIPTION ---
+async function register(event, route) {
+    event.preventDefault();
+    const form = event.target;
+    const data = new FormData(form);
+    const values = Object.fromEntries(data.entries());
+    const responseZone = document.getElementById('zone_response');
+
+    try {
+        const response = await fetch(`${API_URL}${route}`, {
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify(values)
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+            responseZone.textContent = result.message || "Inscription réussie !";
+            responseZone.style.color = "green";
+        } else {
+            throw new Error(result.detail || 'Erreur d\'inscription');
+        }
+    } catch (error) {
+        if(responseZone){
+            responseZone.textContent = "Erreur : " + error.message;
+            responseZone.style.color = "red";
+        }
     }
-}      
+}
 
-
-
-// --- FONCTIONS AUTH (LOGIN / REGISTER) ---
+// --- CONNEXION ---
 async function login(event, route) {
     event.preventDefault();
     const form = event.target;
@@ -59,80 +107,67 @@ async function login(event, route) {
         }
     }
 }
-async function register(event, route) {
-    /**
-     * Gère l'inscription de l'utilisateur et affiche un message de succès ou d'erreur
-     * @param {string} route - L'URL de l'endpoint d'inscription de l'API
-     * @param {Event} event - L'événement de soumission du formulaire
-     */
-    event.preventDefault(); // Empêche le rechargement de la page
-    const form = event.target; // Récupère le formulaire à partir de l'événement
-    const data = new FormData(form);
-    const values = Object.fromEntries(data.entries());
-    const responseZone = document.getElementById('zone_response');
-    try {
-        const response = await fetch(`${API_URL}${route}`, {
-            method: 'POST',
-            headers: {'content-type': 'application/json'},
-            body: JSON.stringify(values)
-        });
 
-        if (response.ok) {
-            const data = await response.json();
-            responseZone.textContent = data.message;
-            responseZone.style.color = "green";
-        }
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.detail || 'Erreur d\'inscription');
-        }
-                
-            }
-        catch (error) {
-            if(responseZone){
-                responseZone.textContent = "Erreur:" + error.message;
-                responseZone.style.color = "red";
-            }
-        }
-    }
 
-// 1. Gestion du Formulaire d'Analyse (Page Home)
+
+// --- GESTION ANALYSE ---
 const uploadForm = document.getElementById('UploadForm');
 if (uploadForm) {
     uploadForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        const cvFile = document.getElementById('cvFile').files[0];
+        const cvFileInput = document.getElementById('cvFile');
         const jobDesc = document.getElementById('jobOfferDescription').value.trim();
         const btn = document.getElementById('uploadBtn');
-
-        const currentFileFingerprint = cvFile.name + cvFile.size;
-
-        if (currentFileFingerprint === lastAnalyzedFile && jobDesc === lastAnalyzedJobDesc) {
-            console.log("Optimisation : Données identiques.");
-            return;
-        }
-
+        const token = localStorage.getItem('token');
+        const saveCheck = document.getElementById('saveCvCheck').checked;
+        
         btn.disabled = true;
         document.getElementById('loader').style.display = 'block';
+    try {
+            // SAUVEGARDE (Si cochée ET qu'il y a un fichier physique)
+            if (saveCheck && cvFileInput.files.length > 0) {
+                const saveFormData = new FormData();
+                saveFormData.append('cv', cvFileInput.files[0]);
+                
+                const saveResponse = await fetch(`${API_URL}/save-cv`, { // On nomme différemment pour éviter les conflits
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: saveFormData
+                });
 
+                if (saveResponse.ok) {
+                    console.log("CV sauvegardé avec succès !");
+                    await loadMyCvs(); // On attend que la liste soit rechargée
+                } else {
+                    console.error("Erreur lors de la sauvegarde du CV.");
+                }
+            }
+        } catch (e) {
+            console.error("Erreur lors de la sauvegarde du CV:", e);
+        }
         try {
-            const formData = new FormData();
-            formData.append('cv', cvFile); // Vérifie si ton backend attend 'cv' ou 'cvFile'
-            formData.append('job_offer_description', jobDesc);
 
-            const token = localStorage.getItem('token');
+
+            const analysisformData = new FormData();
+            analysisformData.append('job_offer_description', jobDesc);
+
+            if (selectedCvId) {
+                analysisformData.append('cv_id', selectedCvId);
+                console.log("Analyse avec CV ID:", selectedCvId);
+            } else if (cvFileInput.files.length > 0) {
+                analysisformData.append('cv', cvFileInput.files[0]);
+            }
+
             const response = await fetch(`${API_URL}/analyze`, {
                 method: 'POST',
-                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-                body: formData
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: analysisformData
             });
 
             if (response.ok) {
                 const result = await response.json();
-                lastAnalyzedFile = currentFileFingerprint;
-                lastAnalyzedJobDesc = jobDesc;
-                displayAnalysis(result.matching_score, result.analysis_details, result.ats_advice);
+                displayAnalysis(result.ATS_score, result.analysis_details, result.ats_advice);
             }
         } finally {
             document.getElementById('loader').style.display = 'none';
@@ -142,81 +177,82 @@ if (uploadForm) {
     });
 }
 
-async function checkAuth() {
-    /**
-     * Vérifie si l'utilisateur est authentifié en vérifiant la présence d'un token dans le localStorage
-     * Si le token est absent, redirige vers la page de connexion
-     */
-    const token = localStorage.getItem('token');
-    console.log("Bearer ${token}");
 
-    if (!token) {
-        console.log("Token d'authentification manquant, redirection vers la page de connexion...");
-        window.location.href = 'index.html';
-        return;
-    }
+// --- CHARGEMENT BIBLIOTHÈQUE ---
+async function loadMyCvs() {
+    const token = localStorage.getItem('token');
+    const cvsList = document.getElementById('cvs-list'); 
+    const libraryDiv = document.getElementById('cv-library');
+
+    if (!token || !cvsList || !libraryDiv) return;
+
     try {
-        const response = await fetch(`${API_URL}${"/user/me"}`, {
+        const response = await fetch(`${API_URL}/my-cvs`, {
             method: 'GET',
-            headers: {
-                "Authorization": `Bearer ${token}`
-            }
+            headers: { "Authorization": `Bearer ${token}` }
         });
-        console.log(response);
+
         if (response.ok) {
             const data = await response.json();
-            const userDisplay = document.getElementById('user-display');
-            if (userDisplay) {
-                userDisplay.textContent = data.username;
+            if (data.cvs && data.cvs.length > 0) {
+                libraryDiv.style.display = 'block'; 
+                cvsList.innerHTML = data.cvs.map(cv => `
+                <li style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;">
+                <span style="font-weight: 500; color: #444;">📄 ${cv.filename}</span>
+                <button onclick="useSavedCv(${cv.id}, '${cv.filename.replace(/'/g, "\\'")}')" 
+                class="button" 
+                style="width: auto; padding: 6px 15px; font-size: 13px; margin: 0; background-color: #1a497a; border-radius: 6px;">
+                Utiliser ce CV
+                </button>
+                </li>`).join('');
+            } else {
+                libraryDiv.style.display = 'none';
             }
-        } else {
-            console.log("Token d'authentification invalide ou expiré, redirection vers la page de connexion...");
-            localStorage.clear();
+        }
+    } catch (e) {
+        console.error("Erreur bibliothèque:", e);
+    }
+}
+
+async function checkAuth() {
+    const token = localStorage.getItem('token');
+    const username = localStorage.getItem('username');
+    
+    if (!token) {
+        if (!window.location.href.includes('index.html') && !window.location.href.includes('registration')) {
             window.location.href = 'index.html';
         }
-    }
-    catch (error) {
-        console.error("Erreur lors de la vérification de l'authentification:", error);
-    }
+        return;
     }
 
-async function logout() {
-    /**
-     * Gère la déconnexion de l'utilisateur en supprimant le token du localStorage et en redirigeant vers la page de connexion
-     */
+    const userDisplay = document.getElementById('user-display');
+    if (userDisplay && username) {
+        userDisplay.textContent = username;
+    }
+
+    if (document.getElementById('cvs-list')) {
+        loadMyCvs();
+    }
+}
+
+function logout() {
     localStorage.clear();
-    console.log("Déconnexion réussie, redirection vers la page de connexion...");
     window.location.href = 'index.html';
 }
 
-// --- INITIALISATION DES ÉCOUTEURS (EVENT LISTENERS) ---
+// --- ÉCOUTEURS ---
+const cvInput = document.getElementById('cvFile');
+if (cvInput) cvInput.addEventListener('change', validateForm);
 
-// On utilise des conditions 'if' pour vérifier la présence des éléments 
-// avant d'ajouter des écouteurs. Cela évite de faire planter le script.
+const jobInput = document.getElementById('jobOfferDescription');
+if (jobInput) jobInput.addEventListener('input', validateForm);
 
-const cvElem = document.getElementById('cvFile');
-if (cvElem) {
-    cvElem.addEventListener('change', validateForm);
-}
+const loginF = document.getElementById('loginForm');
+if (loginF) loginF.addEventListener('submit', (e) => login(e, '/login'));
 
-const jobElem = document.getElementById('jobOfferDescription');
-if (jobElem) {
-    jobElem.addEventListener('input', validateForm);
-}
-// 2. Gestion du Formulaire de Login (Page Index)
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-    loginForm.addEventListener('submit', (event) => {
-        login(event, '/login'); 
-    });
-}
+const regF = document.getElementById('registrationForm');
+if (regF) regF.addEventListener('submit', (e) => register(e, '/register'));
 
-const registrationForm = document.getElementById('registrationForm');
-if (registrationForm) {
-    registrationForm.addEventListener('submit', (event) => {
-        login(event, '/register'); 
-    });
-}
-
-// Initialisation de l'état du bouton au chargement
+// Initialisation
 validateForm();
+checkAuth();

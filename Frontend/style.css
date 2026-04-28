@@ -1,177 +1,157 @@
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    display: flex;
-    flex-direction: column; /* On empile verticalement */
-    align-items: center;    /* On centre horizontalement */
-    min-height: 100vh;
-    background-color: #1a1a1a; /* Un gris très sombre plus moderne */
-    margin: 0;
-    padding: 40px 20px;     /* On donne de l'air en haut et en bas */
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #1a1a1a;
     color: white;
+    margin: 0;
+    padding: 40px 20px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .container {
-    background-color: #ffffff;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    text-align: center;
     width: 100%;
-    max-width: 400px;
-    margin-bottom: 30px; /* Espace avec la section suivante */
-    color: #333; /* Texte sombre dans la carte blanche */
-}
-h1 {
-            color: #000000;
-            margin-bottom: 20px;
-        }
-.form-group {
-            margin-bottom: 15px;
-            text-align: left;
-        }
-.form-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #555;
-        }
-.form-group input[type="text"],
-.form-group input[type="password"] {
-            width: calc(100% - 20px);
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-.button {
-            background-color: #1a497a;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 100%;
-            margin-top: 10px;
-            text-decoration: none; /* For anchor tag buttons */
-            display: inline-block;
-            text-align: center;
-        }
-.button:hover {
-            background-color: #24b300;
-        }
-.create-account-link {
-            margin-top: 20px;
-            display: block;
-            color: #007bff;
-            text-decoration: none;
-        }
-.create-account-link:hover {
-            text-decoration: underline;
-        }
-
-#zone_response {
-            margin-top: 15px;
-            font-size: 14px;
-            text-align: center;
-        }
-
-/* Section d'upload */
-.upload-section {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 2px solid #eeeeee;
-    text-align: center;
-}
-
-.upload-section h3 {
-    color: #333;
-    margin-bottom: 20px;
-}
-
-/* Style du formulaire */
-#UploadForm {
+    max-width: 900px;
     display: flex;
-    flex-direction: column; /* Aligne les éléments verticalement */
-    align-items: center;    /* Centre horizontalement */
-    gap: 20px;              /* Espace régulier entre chaque élément */
-    width: 100%;
-}
-/* Style du champ de fichier (le rendre plus discret) */
-#cvFile {
-    width: 100%;
-    max-width: 400px; /* Plus large pour être plus élégant */
-    box-sizing: border-box;
+    flex-direction: column;
 }
 
-#jobOfferDescription {
+/* La grille qui rend les blocs identiques */
+.dashboard-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
     width: 100%;
-    max-width: 600px; /* On donne de l'espace à la zone de texte */
-    box-sizing: border-box;
 }
 
-/* Style du bouton d'analyse */
-#uploadBtn {
+/* Style commun pour les rectangles blancs */
+.card {
+    background: white;
+    color: #333;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     width: 100%;
-    max-width: 250px; /* Bouton avec une largeur fixe et centrée */
-    padding: 15px;
-    font-size: 1.1em;
-    border-radius: 8px;
-    cursor: pointer;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    transition: all 0.2s ease;
+    box-sizing: border-box; /* Important pour le padding */
+    text-align: center;
 }
 
-#uploadBtn:hover {
-    background-color: #0056b3;
-    transform: translateY(-2px); /* Petit effet de survol sympa */
-}
-/* Zone de résultat (pour le texte extrait) */
-#analysis-result {
-    margin-top: 20px;
-    padding: 20px;
-    background-color: #ffffff;
-    border-radius: 8px;
-    /* On s'assure que la div s'étire selon le contenu */
-    height: auto; 
-    min-height: 100px;
-    /* On gère le débordement proprement */
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-}
-.AnalyzeSection textarea {
+/* Formulaire et Textarea */
+textarea {
     width: 100%;
-    max-width: 500px;
     padding: 12px;
     border: 1px solid #ddd;
     border-radius: 8px;
-    font-family: inherit;
-    resize: vertical; /* Permet à l'utilisateur d'agrandir seulement en hauteur */
     margin-bottom: 15px;
+    box-sizing: border-box;
 }
 
-.AnalyzeSection {
-    background-color: #ffffff;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    width: 100%;
-    max-width: 800px; /* On donne de la largeur pour l'analyse */
-    color: #333;
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Style de la bibliothèque avec espace entre nom et bouton */
+#cvs-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+#cvs-list li span {
+    margin-right: 15px; /* Espace forcé */
+    text-align: left;
+}
+
+/* Bouton logout en bas */
+.footer-actions {
+    margin-top: 50px;
     text-align: center;
-}
-
-#analysis-result {
-    margin-top: 30px;
     width: 100%;
-    max-width: 800px;
-    /* Suppression des styles qui pourraient bloquer la taille */
-    height: auto;
-    color: #333;
 }
 
-.AnalyzeSection {
-    /* Évite de fixer la hauteur ici aussi */
-    height: auto;
-    padding-bottom: 50px; /* Un peu d'air en bas */
+.btn-logout {
+    background: transparent;
+    color: #888;
+    border: 1px solid #444;
+}
+
+.btn-logout:hover {
+    color: #ff4d4d;
+    border-color: #ff4d4d;
+}
+
+/* Responsive : côte à côte si l'écran est large */
+@media (min-width: 768px) {
+    .dashboard-grid {
+        /* Tu peux laisser en column ou passer en row si tu veux les aligner horizontalement */
+    }
+}
+
+/* --- Styles pour les formulaires de Login / Register --- */
+
+.auth-card {
+    max-width: 450px;
+    margin: 0 auto;
+}
+
+.form-group {
+    text-align: left;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box; /* Évite que l'input dépasse de la carte */
+    font-size: 16px;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+}
+
+.auth-footer {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+    color: #666;
+    font-size: 14px;
+}
+
+.link-button {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.link-button:hover {
+    text-decoration: underline;
+}
+
+/* Style spécifique pour les messages d'erreur/succès */
+.response-message {
+    margin-top: 15px;
+    font-size: 14px;
+    font-weight: 500;
 }
