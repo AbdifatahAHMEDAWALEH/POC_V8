@@ -3,6 +3,8 @@ let lastAnalyzedFile = "";
 let lastAnalyzedJobDesc = "";
 let selectedCvId = null;
 
+let currentAnalysis = {cv_text: "", job_desc: "",missing_skills: []};
+
 // --- GESTION BIBLIOTHÈQUE ---
 function useSavedCv(cvId, filename) {
     selectedCvId = cvId;
@@ -166,9 +168,22 @@ if (uploadForm) {
             });
 
             if (response.ok) {
-                const result = await response.json();
-                displayAnalysis(result.ATS_score, result.analysis_details, result.ats_advice);
-            }
+            const data = await response.json();
+            console.log("Analyse reçue:", data);
+
+             // Sauvegarde pour la V2
+            currentAnalysis.cv_text = data.extracted_text; // On récupère le texte à la racine
+            currentAnalysis.job_desc = jobDesc;
+            currentAnalysis.missing_skills = data.analysis.missing_skills || [];
+
+    // APPEL CORRIGÉ : On descend dans l'objet 'analysis'
+            displayAnalysis(
+                data.analysis.ATS_score,      // 78
+                data.analysis.analysis_details, // "Le profil est très solide..."
+                data.analysis.ats_advice,     // C'est un tableau (Array) dans ton log
+                data.analysis.missing_skills  // C'est un tableau (Array) dans ton log
+            );
+        }
         } finally {
             document.getElementById('loader').style.display = 'none';
             btn.disabled = false;
@@ -214,6 +229,87 @@ async function loadMyCvs() {
     }
 }
 
+async function sendOptimizationRequest() {
+    console.log("Tentative d'optimisation..."); // Pour débugger
+    const token = localStorage.getItem('token');
+    const surveyItems = document.querySelectorAll('.survey-item');
+    
+    let userFeedback = []; // CORRECTION : Tableau vide [] obligatoire pour .push()
+
+    surveyItems.forEach((item, index) => {
+        const isYes = document.querySelector(`input[name="q_${index}"]:checked`)?.value === "yes";
+        if (isYes) {
+            const skillName = item.querySelector('strong').innerText; // Correction 'strong' minuscule
+            const context = document.getElementById(`note_${index}`).value;
+            userFeedback.push({ skill: skillName, context: context });
+        }
+    });
+
+    if (userFeedback.length === 0) {
+        alert("Veuillez confirmer au moins une compétence pour optimiser votre CV.");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_URL}/optimize`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                cv_text: currentAnalysis.cv_text, 
+                job_desc: currentAnalysis.job_desc,
+                user_responses: userFeedback // Doit matcher le nom dans ton main.py
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            displayOptimizedResults(result.optimized_bullets);
+        } else {
+            const error = await response.json();
+            console.error("Erreur serveur :", error);
+        }
+    } catch (e) {
+        console.error("Erreur réseau :", e);
+    }
+}
+
+function displayOptimizedResults(bullets) {
+    const container = document.getElementById('analysis-result');
+    
+    // On crée une nouvelle carte pour l'optimisation
+    const optCard = document.createElement('div');
+    optCard.className = 'card';
+    optCard.style.marginTop = "20px";
+    optCard.style.border = "2px solid #2ecc71"; // Vert pour montrer que c'est l'amélioration
+    optCard.style.textAlign = "left";
+
+    optCard.innerHTML = `
+        <h3 style="color: #2ecc71; margin-top: 0;">✨ Expériences Optimisées (Score 90%+)</h3>
+        <p style="font-size: 14px; color: #666;">
+            Voici vos nouvelles puces d'expériences. Copiez-les directement dans votre CV :
+        </p>
+        <ul style="list-style-type: none; padding: 0;">
+            ${bullets.map(bullet => `
+                <li style="margin-bottom: 15px; padding: 12px; background: #f0fff4; border-left: 4px solid #2ecc71; border-radius: 4px; font-size: 14px; line-height: 1.5;">
+                    ${bullet}
+                </li>
+            `).join('')}
+        </ul>
+        <button onclick="copyAllBullets()" class="btn-primary" style="background: #2ecc71; width: auto; padding: 10px 20px;">
+            Copier tout le texte
+        </button>
+    `;
+
+    // On l'ajoute à la suite de l'analyse initiale
+    container.appendChild(optCard);
+    
+    // Petit scroll automatique pour voir le résultat
+    optCard.scrollIntoView({ behavior: 'smooth' });
+}
+
 async function checkAuth() {
     const token = localStorage.getItem('token');
     const username = localStorage.getItem('username');
@@ -233,6 +329,23 @@ async function checkAuth() {
     if (document.getElementById('cvs-list')) {
         loadMyCvs();
     }
+}
+
+function toggleContext(index, show) {
+    const textarea = document.getElementById(`note_${index}`);
+    if (textarea) {
+        textarea.style.display = show ? 'block' : 'none';
+        // Petit plus : on met le focus dessus si on l'affiche
+        if (show) textarea.focus();
+    }
+}
+
+function copyAllBullets() {
+    const bullets = document.querySelectorAll('#analysis-result ul li');
+    const textToCopy = Array.from(bullets).map(li => li.innerText).join('\n\n');
+    navigator.clipboard.writeText(textToCopy).then(() => {
+        alert("Texte copié dans le presse-papier !");
+    });
 }
 
 function logout() {

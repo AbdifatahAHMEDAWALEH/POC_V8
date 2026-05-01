@@ -20,6 +20,7 @@ import json
 import ollama
 import hashlib
 from datetime import datetime
+from typing import List
 
 last_state = {
     "last_cv":"",
@@ -40,7 +41,7 @@ Réponds EXCLUSIVEMENT en JSON avec cette structure :
     "ATS_score": 85,
     "analysis_details": "Analyse globale du profil...",
     "ats_advice": "Liste des mots-clés techniques de l'offre absents du CV...",
-    "missing_skills": ["skill1", "skill2", "skill3"],
+    "missing_skills": ["skill1", "skill2", "skill3"], (liste des 3 compétences ou outils techniques les plus importants mentionnés dans l'offre mais absents du CV)
 
 }
 Aucun autre texte ne doit être présent dans ta réponse, uniquement ce JSON"""
@@ -126,6 +127,14 @@ class userCV(BaseModel):
     content: str
     created_at: str
 
+class SkillFeedback(BaseModel):
+    skill: str
+    context: str
+
+class OptimizationRequest(BaseModel):
+    cv_text: str
+    job_desc: str
+    user_responses: List[SkillFeedback]
 
 # --- création de la base de données ---
 Base.metadata.create_all(bind=engine)
@@ -316,8 +325,11 @@ async def analyze(cv: Optional[UploadFile] = File(None),
                     raise HTTPException(status_code=404, detail="CV non trouvé")
                 text_extrait = db_doc.content
             first_analysis = ""
-            first_analysis = analyse_cv(text_extrait, job_offer_description)
-            return first_analysis
+            first_analysis = analyse_cv(text_extrait, job_offer_description,)
+            return {
+            "analysis": first_analysis,
+            "extracted_text": text_extrait
+        }
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -367,8 +379,35 @@ async def get_my_cvs(authorization: str = Header(None)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+@app.post("/optimize")
+async def optimize_cv(data: OptimizationRequest, authorization: str = Header(None)):
+    # Endpoint pour recevoir les feedbacks sur les compétences manquantes et affiner l'analyse
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Token manquant")
+    feedback_text = "\n".join([f"- {f.skill}: {f.context}" for f in data.user_responses])
+    prompt = f"""
+    Tu es un expert en rédaction de CV. Ta mission est de REFORMULER les expériences du candidat.
+    
+    CONTEXTE :
+    - CV ORIGINAL : {data.cv_text}
+    - OFFRE D'EMPLOI : {data.job_desc}
+    - COMPÉTENCES CONFIRMÉES PAR LE CANDIDAT :
+    {feedback_text}
+    
+    CONSIGNES :
+    1. Réécris 3 à 5 puces d'expériences du CV original.
+    2. Utilise les informations de la section 'COMPÉTENCES CONFIRMÉES' pour enrichir ces puces.
+    3. Adopte un ton percutant et professionnel (méthode STAR).
+    4. Réponds EXCLUSIVEMENT en JSON : {{"optimized_bullets": ["puce 1", "puce 2", ...]}}
+    """
+    response = ollama.chat(
+        model="gemma4:e4b", 
+        messages=[{'role': 'system', 'content': main_system_prompt}, {'role': 'user', 'content': prompt}]
+    )
+    contenu = response['message']['content']
+    debut, fin = contenu.find('{'), contenu.rfind('}') + 1
+    return json.loads(contenu[debut:fin])
 
-        
-        
+
 
 app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="Frontend")

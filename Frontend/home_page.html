@@ -63,7 +63,7 @@
             if (typeof checkAuth === "function") checkAuth();
         });
 
-        function displayAnalysis(score, details, advice) {
+        function displayAnalysis(score, details, advice, missing_skills) {
             const container = document.getElementById('analysis-result');
             let color = score >= 70 ? "#2ecc71" : (score >= 40 ? "#f1c40f" : "#e74c3c");
             
@@ -80,8 +80,35 @@
                 </div>
             `;
             container.scrollIntoView({ behavior: 'smooth' });
-            
-        }
+
+        if (score >= 70 && missing_skills && missing_skills.length > 0) {
+        const surveySection = document.createElement('div');
+        surveySection.className = 'card';
+        surveySection.style.marginTop = "20px";
+        surveySection.innerHTML = `
+            <h3>🎯 Précisons vos compétences</h3>
+            <p>Pour atteindre 90%+, confirmez-vous maîtriser ces points ?</p>
+            <div id="survey-questions">
+                ${missing_skills.map((skill, index) => `
+                    <div class="survey-item" style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        <strong>${skill}</strong>
+                        <div>
+                            <input type="radio" name="q_${index}" value="yes" onclick="toggleContext(${index}, true)"> Oui 
+                            <input type="radio" name="q_${index}" value="no" onclick="toggleContext(${index}, false)" checked> Non
+                        </div>
+                        <textarea id="note_${index}" style="display:none; width:100%; margin-top:10px;" placeholder="Détaillez votre expérience avec cet outil..."></textarea>
+                    </div>
+                `).join('')}
+            </div>
+            <button id="optimizeBtn" class="button" style="background:#6c5ce7; width:100%;">
+    Générer la reformulation magique ✨
+</button>
+        `;
+        container.appendChild(surveySection);
+        // AJOUT DE L'ÉCOUTEUR APRÈS L'INJECTION DANS LE DOM
+        document.getElementById('optimizeBtn').addEventListener('click', sendOptimizationRequest);
+    }        
+}
 
     </script>
 </body>
