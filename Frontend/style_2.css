@@ -1,0 +1,292 @@
+:root {
+    /* Mode Clair */
+    --primary: #4f46e5;
+    --primary-hover: #4338ca;
+    --bg-page: #f8fafc;
+    --sidebar-bg: #ffffff;
+    --card-bg: #ffffff;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --input-bg: #ffffff;
+    --library-item-bg: #f1f5f9;
+    --success: #10b981;
+    --danger: #ef4444;
+}
+
+/* Mode Sombre */
+body.dark-mode {
+    --bg-page: #0f172a;
+    --sidebar-bg: #1e293b;
+    --card-bg: #1e293b;
+    --text-main: #f1f5f9;
+    --text-muted: #94a3b8;
+    --border: #334155;
+    --input-bg: #0f172a;
+    --library-item-bg: #334155;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, sans-serif;
+    transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+}
+
+body {
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    margin: 0;
+    min-height: 100vh;
+}
+
+/* --- AUTH PAGES (Login/Register) --- */
+.auth-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 440px;
+}
+
+.logo-area {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.logo-area h2 {
+    color: var(--primary);
+    margin: 10px 0 0 0;
+    font-weight: 700;
+}
+
+/* --- DASHBOARD STRUCTURE --- */
+.sidebar {
+    width: 280px;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--border);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    z-index: 100;
+}
+
+.main-content {
+    margin-left: 280px;
+    padding: 40px;
+    max-width: 1200px;
+}
+
+/* --- COMPOSANTS --- */
+.card {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 30px;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-bottom: 24px;
+}
+
+h1 { font-size: 1.75rem; margin-top: 0; }
+.subtitle { color: var(--text-muted); margin-bottom: 30px; }
+
+.form-group { margin-bottom: 20px; }
+label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; }
+
+input, textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text-main);
+    font-size: 1rem;
+}
+
+input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    font-size: 1rem;
+}
+
+.btn-primary:hover { background: var(--primary-hover); }
+
+.btn-logout {
+    margin-top: auto;
+    background: none;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* --- BIBLIOTHÈQUE --- */
+.library-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #3b82f6;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+#cvs-list { list-style: none; padding: 0; }
+.library-item {
+    background: var(--library-item-bg);
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* --- CLOUD UPLOAD --- */
+.file-upload-wrapper {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+.file-upload-wrapper:hover { border-color: var(--primary); background: rgba(79, 70, 229, 0.02); }
+
+.cloud-icon { color: var(--text-muted); margin-bottom: 15px; }
+
+/* --- RESPONSIVE --- */
+@media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main-content { margin-left: 0; padding: 20px; }
+}
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.full-width { grid-column: span 2; }
+
+/* Style des items de la bibliothèque */
+.library-item {
+    display: flex;
+    flex-direction: column; /* Nom en haut, bouton en bas pour plus de place */
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+}
+
+.btn-cv-action {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.btn-cv-action:hover {
+    background: var(--primary-hover);
+}
+
+/* Style quand le CV est sélectionné */
+.btn-cv-action.btn-selected {
+    background: var(--danger); /* Rouge pour "Retirer" */
+}
+
+/* Zone d'info dans le contenu principal */
+#selected-cv-info {
+    background: rgba(79, 70, 229, 0.1);
+    border: 1px solid var(--primary);
+    color: var(--text-main);
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+/* Bouton Mode Sombre dans la sidebar */
+.theme-switch {
+    width: 100%;
+    background: var(--input-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+/* Bouton Lancer l'analyse (uniformisé avec btn-primary) */
+#uploadBtn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    font-size: 1rem;
+    transition: background 0.2s;
+}
+
+#uploadBtn:hover {
+    background: var(--primary-hover);
+}
+
+/* État désactivé pour le bouton analyse */
+#uploadBtn:disabled {
+    background: var(--text-muted);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+#optimizeBtn {
+    margin-top: 10px;
+    padding: 14px;
+    background: var(--primary); /* Ou #6c5ce7 si tu veux garder le violet */
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+:root {
+    /* ... tes variables existantes ... */
+    --opt-bg: #f0fff4; /* Fond vert clair pour le mode clair */
+    --opt-text: #1e293b; /* Texte foncé */
+}
+
+body.dark-mode {
+    /* ... tes variables sombres existantes ... */
+    --opt-bg: rgba(16, 185, 129, 0.1); /* Fond vert très translucide */
+    --opt-text: #f1f5f9; /* Texte clair */
+}

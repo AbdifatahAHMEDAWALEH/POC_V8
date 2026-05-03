@@ -9,24 +9,29 @@ let currentAnalysis = {cv_text: "", job_desc: "",missing_skills: []};
 function useSavedCv(cvId, filename) {
     selectedCvId = cvId;
     
+    // On affiche l'info du CV sélectionné
     const infoZone = document.getElementById('selected-cv-info');
-    infoZone.style.display = 'block';
-    // Ajout d'une petite animation de flash pour attirer l'oeil
-    infoZone.style.animation = "highlight 1s ease"; 
+    infoZone.style.display = 'flex';
+    document.getElementById('selected-cv-name').innerText = "📍 Prêt : " + filename;
     
-    document.getElementById('selected-cv-name').innerText = "📍 Prêt pour analyse : " + filename;
+    // On masque tout le bloc Upload (Zone PDF + Checkbox)
     document.getElementById('file-input-container').style.display = 'none';
-
-    // Scroll fluide vers le formulaire pour mobile/petits écrans
-    document.querySelector('.AnalyzeSection').scrollIntoView({ behavior: 'smooth' });
 
     validateForm();
 }
 
 function clearSelectedCv() {
     selectedCvId = null;
+    
+    // On masque l'info
     document.getElementById('selected-cv-info').style.display = 'none';
+    
+    // On réaffiche tout le bloc Upload (Zone PDF + Checkbox)
     document.getElementById('file-input-container').style.display = 'block';
+    
+    // On vide l'input file par sécurité
+    document.getElementById('cvFile').value = "";
+
     validateForm();
 }
 
@@ -211,15 +216,25 @@ async function loadMyCvs() {
             const data = await response.json();
             if (data.cvs && data.cvs.length > 0) {
                 libraryDiv.style.display = 'block'; 
-                cvsList.innerHTML = data.cvs.map(cv => `
-                <li style="padding: 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s;">
-                <span style="font-weight: 500; color: #444;">📄 ${cv.filename}</span>
-                <button onclick="useSavedCv(${cv.id}, '${cv.filename.replace(/'/g, "\\'")}')" 
-                class="button" 
-                style="width: auto; padding: 6px 15px; font-size: 13px; margin: 0; background-color: #1a497a; border-radius: 6px;">
-                Utiliser ce CV
-                </button>
-                </li>`).join('');
+                cvsList.innerHTML = data.cvs.map(cv => {
+                    // Vérifie si ce CV est celui actuellement sélectionné
+                    const isSelected = selectedCvId === cv.id;
+                    const btnText = isSelected ? "Retirer" : "Utiliser";
+                    const btnClass = isSelected ? "btn-selected" : "";
+
+                    return `
+                    <li class="library-item">
+                        <div style="display: flex; flex-direction: column; overflow: hidden;">
+                            <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                📄 ${cv.filename}
+                            </span>
+                        </div>
+                        <button onclick="handleCvSelection(${cv.id}, '${cv.filename.replace(/'/g, "\\'")}')" 
+                                class="btn-cv-action ${btnClass}">
+                            ${btnText}
+                        </button>
+                    </li>`;
+                }).join('');
             } else {
                 libraryDiv.style.display = 'none';
             }
@@ -233,8 +248,17 @@ async function sendOptimizationRequest() {
     console.log("Tentative d'optimisation..."); // Pour débugger
     const token = localStorage.getItem('token');
     const surveyItems = document.querySelectorAll('.survey-item');
+    const optBtn = document.getElementById('optimizeBtn')
     
     let userFeedback = []; // CORRECTION : Tableau vide [] obligatoire pour .push()
+    
+    // 1. Désactiver le bouton et changer son aspect
+    if (optBtn) {
+        optBtn.disabled = true;
+        optBtn.innerHTML = "⏳ Optimisation en cours...";
+        optBtn.style.opacity = "0.7";
+        optBtn.style.cursor = "not-allowed";
+    }
 
     surveyItems.forEach((item, index) => {
         const isYes = document.querySelector(`input[name="q_${index}"]:checked`)?.value === "yes";
@@ -274,39 +298,45 @@ async function sendOptimizationRequest() {
     } catch (e) {
         console.error("Erreur réseau :", e);
     }
+    finally {
+        // 2. Réactiver le bouton une fois terminé
+        if (optBtn) {
+            optBtn.disabled = false;
+            optBtn.innerHTML = "Générer la reformulation magique ✨";
+            optBtn.style.opacity = "1";
+            optBtn.style.cursor = "pointer";
+        }
+    }
+    
 }
 
 function displayOptimizedResults(bullets) {
     const container = document.getElementById('analysis-result');
     
-    // On crée une nouvelle carte pour l'optimisation
     const optCard = document.createElement('div');
-    optCard.className = 'card';
+    optCard.className = 'card reformulation-card'; // Utilise la classe CSS
     optCard.style.marginTop = "20px";
-    optCard.style.border = "2px solid #2ecc71"; // Vert pour montrer que c'est l'amélioration
+    optCard.style.border = "2px solid var(--success)";
     optCard.style.textAlign = "left";
 
     optCard.innerHTML = `
-        <h3 style="color: #2ecc71; margin-top: 0;">✨ Expériences Optimisées (Score 90%+)</h3>
-        <p style="font-size: 14px; color: #666;">
+        <h3 style="color: var(--success); margin-top: 0;">✨ Expériences Optimisées (Score 90%+)</h3>
+        <p style="font-size: 14px; color: var(--text-muted);">
             Voici vos nouvelles puces d'expériences. Copiez-les directement dans votre CV :
         </p>
         <ul style="list-style-type: none; padding: 0;">
             ${bullets.map(bullet => `
-                <li style="margin-bottom: 15px; padding: 12px; background: #f0fff4; border-left: 4px solid #2ecc71; border-radius: 4px; font-size: 14px; line-height: 1.5;">
+                <li style="margin-bottom: 15px; padding: 16px; background: var(--opt-bg); color: var(--opt-text); border-left: 4px solid var(--success); border-radius: 8px; font-size: 14px; line-height: 1.6;">
                     ${bullet}
                 </li>
             `).join('')}
         </ul>
-        <button onclick="copyAllBullets()" class="btn-primary" style="background: #2ecc71; width: auto; padding: 10px 20px;">
+        <button onclick="copyAllBullets()" class="btn-primary" style="background: var(--success); width: auto; padding: 10px 20px;">
             Copier tout le texte
         </button>
     `;
 
-    // On l'ajoute à la suite de l'analyse initiale
     container.appendChild(optCard);
-    
-    // Petit scroll automatique pour voir le résultat
     optCard.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -347,11 +377,50 @@ function copyAllBullets() {
         alert("Texte copié dans le presse-papier !");
     });
 }
+function handleCvSelection(cvId, filename) {
+    if (selectedCvId === cvId) {
+        // Si on clique sur le même CV, on désélectionne
+        clearSelectedCv();
+    } else {
+        // Sinon, on sélectionne le nouveau
+        useSavedCv(cvId, filename);
+    }
+    // On recharge la liste pour mettre à jour l'apparence des boutons
+    loadMyCvs();
+}
 
 function logout() {
     localStorage.clear();
     window.location.href = 'index.html';
 }
+
+function updateThemeButton(isDark) {
+    const btn = document.querySelector('.theme-switch');
+    if (btn) {
+        btn.innerHTML = isDark ? "☀️ Mode Clair" : "🌙 Mode Sombre";
+    }
+}
+
+function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    const isDark = document.body.classList.contains('dark-mode');
+    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    
+    // Mise à jour visuelle du bouton
+    updateThemeButton(isDark);
+}
+
+
+// Au chargement de la page, on applique le bon texte
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        updateThemeButton(true);
+    } else {
+        updateThemeButton(false);
+    }
+});
 
 // --- ÉCOUTEURS ---
 const cvInput = document.getElementById('cvFile');

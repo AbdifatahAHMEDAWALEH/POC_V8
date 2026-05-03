@@ -3,31 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - Expert CV</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Connexion - ATS Optimizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style_2.css">
 </head>
-<body>
-    <div class="container">
+<body class="auth-body">
+    <div class="auth-container">
+        <div class="logo-area">
+            <span>🚀</span>
+            <h2>ATS Optimizer</h2>
+        </div>
+
         <div class="card auth-card">
-            <h1>Connexion</h1>
-            <p style="color: #666; margin-bottom: 30px;">Veuillez vous connecter pour accéder à l'outil.</p>
+            <h1>Bon retour</h1>
+            <p class="subtitle">Connectez-vous pour optimiser vos candidatures.</p>
             
             <form id="loginForm">
                 <div class="form-group">
-                    <label for="username">Nom d'utilisateur</label>
-                    <input type="text" id="username" name="username" placeholder="Votre pseudo" required>
+                    <label>Nom d'utilisateur</label>
+                    <input type="text" name="username" placeholder="Votre pseudo" required>
                 </div>
                 <div class="form-group">
-                    <label for="password">Mot de passe</label>
-                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                    <label>Mot de passe</label>
+                    <input type="password" name="password" placeholder="••••••••" required>
                 </div>     
                 <button type="submit" class="btn-primary">Se connecter</button> 
                 <p id="zone_response" class="response-message"></p>
             </form>
 
             <div class="auth-footer">
-                Vous n'avez pas encore de compte ? <br>
-                <a href="registration_page.html" class="link-button">Créer un compte expert</a>
+                Pas encore de compte ? 
+                <a href="registration_page.html" class="link-button">Créer un compte</a>
             </div>
         </div>
     </div>
