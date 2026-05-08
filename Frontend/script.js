@@ -5,34 +5,59 @@ let selectedCvId = null;
 
 let currentAnalysis = {cv_text: "", job_desc: "",missing_skills: []};
 
+// Utilitaire pour éviter les crashs si un élément manque
+const setElementValue = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+};
+
+// Utilisation dans useSavedCv :
+setElementValue('cvFile', "");
+
 // --- GESTION BIBLIOTHÈQUE ---
 function useSavedCv(cvId, filename) {
     selectedCvId = cvId;
+    const cvFileInput = document.getElementById('cvFile');
     
-    // On affiche l'info du CV sélectionné
+    // Ajout d'une sécurité : on ne change la valeur que si l'élément existe
+    if (cvFileInput) {
+        cvFileInput.value = ""; 
+    }
+    
     const infoZone = document.getElementById('selected-cv-info');
-    infoZone.style.display = 'flex';
-    document.getElementById('selected-cv-name').innerText = "📍 Prêt : " + filename;
-    
-    // On masque tout le bloc Upload (Zone PDF + Checkbox)
-    document.getElementById('file-input-container').style.display = 'none';
+    const nameDisplay = document.getElementById('selected-cv-name');
+    const inputContainer = document.getElementById('file-input-container');
+
+    if (infoZone) infoZone.style.display = 'flex';
+    if (nameDisplay) nameDisplay.innerText = "📍 Prêt : " + filename;
+    if (inputContainer) inputContainer.style.display = 'none';
 
     validateForm();
 }
 
 function clearSelectedCv() {
-    selectedCvId = null;
+    selectedCvId = null; 
     
-    // On masque l'info
     document.getElementById('selected-cv-info').style.display = 'none';
-    
-    // On réaffiche tout le bloc Upload (Zone PDF + Checkbox)
     document.getElementById('file-input-container').style.display = 'block';
-    
-    // On vide l'input file par sécurité
-    document.getElementById('cvFile').value = "";
 
-    validateForm();
+    const uploadWrapper = document.querySelector('.file-upload-wrapper');
+    const uploadSpan = uploadWrapper.querySelector('span'); // On cible le span spécifiquement
+
+    if (uploadSpan) {
+        uploadSpan.innerText = "📁 Cliquez pour uploader un CV (PDF)";
+    }
+
+    // ON NE TOUCHE PAS au innerHTML du wrapper pour garder l'input vivant
+    uploadWrapper.style.borderColor = "var(--border)";
+    uploadWrapper.style.background = "transparent";
+
+    // L'input existe toujours, on peut donc vider sa valeur
+    const fileInput = document.getElementById('cvFile');
+    if (fileInput) fileInput.value = "";
+
+    validateForm(); 
+    loadMyCvs();
 }
 
 // --- FONCTION DE VALIDATION ---
@@ -290,7 +315,8 @@ async function sendOptimizationRequest() {
 
         if (response.ok) {
             const result = await response.json();
-            displayOptimizedResults(result.optimized_bullets);
+            displayOptimizedResults(result);
+            console.log("Optimisation réussie:", result);
         } else {
             const error = await response.json();
             console.error("Erreur serveur :", error);
@@ -310,32 +336,51 @@ async function sendOptimizationRequest() {
     
 }
 
-function displayOptimizedResults(bullets) {
+
+function displayOptimizedResults(data) {
     const container = document.getElementById('analysis-result');
-    
+    // On s'assure d'accéder au tableau, même si la structure varie légèrement
+    const experiences = data.optimized_experiences || [];
+
     const optCard = document.createElement('div');
-    optCard.className = 'card reformulation-card'; // Utilise la classe CSS
+    optCard.className = 'card reformulation-card';
     optCard.style.marginTop = "20px";
     optCard.style.border = "2px solid var(--success)";
-    optCard.style.textAlign = "left";
 
-    optCard.innerHTML = `
-        <h3 style="color: var(--success); margin-top: 0;">✨ Expériences Optimisées (Score 90%+)</h3>
-        <p style="font-size: 14px; color: var(--text-muted);">
-            Voici vos nouvelles puces d'expériences. Copiez-les directement dans votre CV :
+    let htmlContent = `
+        <h3 style="color: var(--success); margin-top: 0;">✨ CV Optimisé (Prêt à l'emploi)</h3>
+        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 20px;">
+            Voici vos expériences restructurées selon votre feedback et l'offre d'emploi.
         </p>
-        <ul style="list-style-type: none; padding: 0;">
-            ${bullets.map(bullet => `
-                <li style="margin-bottom: 15px; padding: 16px; background: var(--opt-bg); color: var(--opt-text); border-left: 4px solid var(--success); border-radius: 8px; font-size: 14px; line-height: 1.6;">
-                    ${bullet}
-                </li>
-            `).join('')}
-        </ul>
-        <button onclick="copyAllBullets()" class="btn-primary" style="background: var(--success); width: auto; padding: 10px 20px;">
-            Copier tout le texte
+    `;
+
+    experiences.forEach(exp => {
+        // Sécurité : on récupère les puces ou on utilise le champ details si puces est absent
+        const pucesAAfficher = exp.puces || (exp.details ? [exp.details] : ["Aucun détail fourni"]);
+        
+        htmlContent += `
+            <div class="exp-block" style="margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid var(--border); text-align: left;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 5px;">
+                    <strong style="font-size: 1.1rem; color: var(--primary);">${exp.poste || "Poste non précisé"}</strong>
+                    <em style="font-size: 0.85rem; color: var(--text-muted);">${exp.dates || ""}</em>
+                </div>
+                <div style="font-weight: 600; margin-bottom: 10px; color: var(--text-main);">${exp.entreprise || ""}</div>
+                <ul style="list-style-type: disc; padding-left: 20px; margin: 0;">
+                    ${pucesAAfficher.map(puce => `
+                        <li style="margin-bottom: 8px; font-size: 14px; color: var(--opt-text); line-height: 1.5;">${puce}</li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+    });
+
+    htmlContent += `
+        <button onclick="copyAllBullets()" class="btn-primary" style="background: var(--success); width: auto; padding: 10px 25px; margin-top: 10px;">
+            Copier le CV optimisé
         </button>
     `;
 
+    optCard.innerHTML = htmlContent;
     container.appendChild(optCard);
     optCard.scrollIntoView({ behavior: 'smooth' });
 }
@@ -379,14 +424,14 @@ function copyAllBullets() {
 }
 function handleCvSelection(cvId, filename) {
     if (selectedCvId === cvId) {
-        // Si on clique sur le même CV, on désélectionne
+        // Désélection : on nettoie tout
         clearSelectedCv();
     } else {
-        // Sinon, on sélectionne le nouveau
+        // Sélection : on active le CV choisi
         useSavedCv(cvId, filename);
     }
-    // On recharge la liste pour mettre à jour l'apparence des boutons
-    loadMyCvs();
+    // Mise à jour visuelle des boutons dans la sidebar
+    loadMyCvs(); 
 }
 
 function logout() {
@@ -411,6 +456,7 @@ function toggleDarkMode() {
 }
 
 
+
 // Au chargement de la page, on applique le bon texte
 document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('theme');
@@ -421,10 +467,37 @@ document.addEventListener('DOMContentLoaded', () => {
         updateThemeButton(false);
     }
 });
+function resetUploadWrapper() {
+    const uploadWrapper = document.querySelector('.file-upload-wrapper');
+    uploadWrapper.innerHTML = `<span>📁 Cliquez pour uploader un CV (PDF)</span>`;
+    uploadWrapper.style.borderColor = "var(--border)";
+    uploadWrapper.style.background = "transparent";
+}
 
 // --- ÉCOUTEURS ---
+
 const cvInput = document.getElementById('cvFile');
-if (cvInput) cvInput.addEventListener('change', validateForm);
+if (cvInput) 
+    {
+        cvInput.addEventListener('change', function(e) {
+        const fileName = e.target.files[0]?.name;
+        const uploadWrapper = document.querySelector('.file-upload-wrapper');
+        if (fileName) {
+        // Changement visuel pour confirmer la sélection
+        uploadWrapper.innerHTML = `
+            <span style="color: var(--success); font-weight: 600;">
+                ✅ Fichier prêt : ${fileName}
+            </span>
+            <small style="display: block; color: var(--text-muted); margin-top: 5px;">
+                Cliquez à nouveau pour changer
+            </small>
+        `;
+        uploadWrapper.style.borderColor = "var(--success)";
+        uploadWrapper.style.background = "rgba(16, 185, 129, 0.05)";
+    }
+    validateForm();
+    });
+}
 
 const jobInput = document.getElementById('jobOfferDescription');
 if (jobInput) jobInput.addEventListener('input', validateForm);

@@ -46,8 +46,46 @@ Réponds EXCLUSIVEMENT en JSON avec cette structure :
 }
 Aucun autre texte ne doit être présent dans ta réponse, uniquement ce JSON"""
 
+JOB_STRUCTURING_PROMPT = """Tu es un expert en analyse de données de recrutement.
+Ta mission est d'extraire les informations essentielles d'une offre d'emploi.
+Réponds EXCLUSIVEMENT en JSON avec cette structure :
+{
+    "titre_poste": "Nom du poste",
+    "missions_cles": ["mission 1", "mission 2"],
+    "hard_skills": ["competence technique 1", "outil 2"],
+    "soft_skills": ["qualité 1"],
+    "niveau_experience": "Sénior/Junior/etc"
+}
+Tout texte inutile (avantages, présentation entreprise) doit être ignoré."""
 
+CV_STRUCTURING_PROMPT = """Tu es un expert en analyse de CV.
+Ta mission est d'extraire les expériences professionnel et les skills si ils sont présents dans le Cv.
+Réponds EXCLUSIVEMENT en JSON avec cette structure :
+{
+    "experiences": [],
+    "skills": []
+}
+Si le CV ne contient pas de section "Compétences" ou "Skills", tu dois  analyser les descriptions d'expériences pour en extraire les compétences techniques mentionnées.""" 
 
+OPTIMIZE_SYSTEM_PROMPT = """Tu es un rédacteur professionnel de CV techniques. 
+Ta mission est de reformuler les descriptions d'expériences pour intégrer les compétences validées, tout en conservant la structure originale du CV.
+
+Tu dois répondre EXCLUSIVEMENT avec un JSON suivant cette structure stricte :
+{
+    "optimized_experiences": [
+        {
+            "poste": "Intitulé du poste original",
+            "entreprise": "Nom de l'entreprise originale",
+            "dates": "Dates originales",
+            "puces": ["Puce reformulée 1", "Puce reformulée 2"]
+        }
+    ]
+}
+
+CONSIGNES :
+1. Le nombre d'objets dans "optimized_experiences" doit être identique au nombre d'expériences du CV.
+2. Si une expérience n'est pas modifiée, recopie ses puces originales dans le champ "puces".
+3. Ne fournis aucun texte avant ou après le JSON."""
 
 # On remonte d'un cran pour trouver le dossier frontend
 current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -307,7 +345,8 @@ async def analyze(cv: Optional[UploadFile] = File(None),
     
     token= authorization.split(" ")[1]
     username = get_current_user(token)
-    
+
+    # ETAPE 1 : extraction du text du cv (soit depuis le fichier uploadé, soit depuis la base de données selon cv_id)        
     try:
         with get_db() as db:
             user = db.query(Account).filter(Account.username == username).first()
@@ -324,8 +363,15 @@ async def analyze(cv: Optional[UploadFile] = File(None),
                 if not db_doc:
                     raise HTTPException(status_code=404, detail="CV non trouvé")
                 text_extrait = db_doc.content
+            print(f"DEBUG CV extrait : {text_extrait[:500]}...") # Affiche les 500 premiers caractères du CV pour vérification
+            # ETAPE 2 : Structuration de l'offre
+            Job_struct_response = ollama.chat(
+                model="gemma4:e2b",
+                messages=[{'role': 'system', 'content': JOB_STRUCTURING_PROMPT}, {'role': 'user', 'content': job_offer_description}]
+            )
+            print(f"DEBUG Offre brute : {Job_struct_response['message']['content']}") # Affiche la réponse brute de l'IA pour vérification
             first_analysis = ""
-            first_analysis = analyse_cv(text_extrait, job_offer_description,)
+            first_analysis = analyse_cv(text_extrait, Job_struct_response)
             return {
             "analysis": first_analysis,
             "extracted_text": text_extrait
@@ -374,36 +420,45 @@ async def get_my_cvs(authorization: str = Header(None)):
             if not user:
                 raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
             
-            cvs = [{"id": doc.id, "filename": doc.filename, "created_at": doc.created_at} for doc in user.documents]
-            return {"cvs": cvs}
+            cvs = db.query(Document).filter(Document.user_id == user.id).order_by(Document.id.desc()).all()
+            return {"cvs": [{"id": cv.id, "filename": cv.filename} for cv in cvs]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
 @app.post("/optimize")
 async def optimize_cv(data: OptimizationRequest, authorization: str = Header(None)):
-    # Endpoint pour recevoir les feedbacks sur les compétences manquantes et affiner l'analyse
     if not authorization:
         raise HTTPException(status_code=401, detail="Token manquant")
-    feedback_text = "\n".join([f"- {f.skill}: {f.context}" for f in data.user_responses])
-    prompt = f"""
-    Tu es un expert en rédaction de CV. Ta mission est de REFORMULER les expériences du candidat.
     
-    CONTEXTE :
-    - CV ORIGINAL : {data.cv_text}
-    - OFFRE D'EMPLOI : {data.job_desc}
-    - COMPÉTENCES CONFIRMÉES PAR LE CANDIDAT :
+    # Préparation du texte de feedback avec mention explicite de l'expérience cible
+    feedback_text = "\n".join([
+        f"- {f.skill} (Lieu/Contexte précisé: {f.context if f.context else 'Non précisé, à déduire'})" 
+        for f in data.user_responses
+    ])
+    print(f"DEBUG Feedback formaté pour l'IA : {feedback_text}") # Affiche le feedback formaté pour vérification
+
+    cv_structure_response = ollama.chat(
+        model="gemma4:e2b", 
+        messages=[{'role': 'system', 'content': CV_STRUCTURING_PROMPT}, {'role': 'user', 'content': data.cv_text}]
+    )
+    print(f"DEBUG Optimized CV response : {cv_structure_response['message']['content']}") # Affiche la réponse brute de l'IA pour vérification
+    user_content = f"""
+    EXPERIENCES PROFESSIONNELLES DU CANDIDAT :
+    {cv_structure_response}
+
+    COMPÉTENCES À INTÉGRER PRIORITAIREMENT :
     {feedback_text}
-    
-    CONSIGNES :
-    1. Réécris 3 à 5 puces d'expériences du CV original.
-    2. Utilise les informations de la section 'COMPÉTENCES CONFIRMÉES' pour enrichir ces puces.
-    3. Adopte un ton percutant et professionnel (méthode STAR).
-    4. Réponds EXCLUSIVEMENT en JSON : {{"optimized_bullets": ["puce 1", "puce 2", ...]}}
     """
+    print(f"DEBUG Contenu envoyé à l'IA pour optimisation : {user_content}") # Affiche le contenu final envoyé à l'IA pour vérification
     response = ollama.chat(
         model="gemma4:e4b", 
-        messages=[{'role': 'system', 'content': main_system_prompt}, {'role': 'user', 'content': prompt}]
+        messages=[
+            {'role': 'system', 'content': OPTIMIZE_SYSTEM_PROMPT}, # PROMPT DÉDIÉ
+            {'role': 'user', 'content': user_content}
+        ]
     )
+    print(f"DEBUG Optimized CV response brute : {response['message']['content']}") # Affiche la réponse brute de l'IA pour vérification
+
     contenu = response['message']['content']
     debut, fin = contenu.find('{'), contenu.rfind('}') + 1
     return json.loads(contenu[debut:fin])
